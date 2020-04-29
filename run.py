@@ -211,7 +211,7 @@ def get_report(paper, keyword):
                 # "headline": headline,
                 "title": title,
                 "author": paper['authors'],
-                "extract": extract,
+                "extract": abstract,
                 "link": paper['main_page'],
                 "time": paper['date']
             }
@@ -276,8 +276,9 @@ def get_papers(keyword, num_results=5):
     per_page = 200
     num_to_show = num_results
     all_unshown = []
-    ua_headers = {'User-Agent':UserAgent().random,}
+    
     while num_to_show > 0:
+        ua_headers = {'User-Agent':UserAgent().random,}
         query = query_temp.format(
             keyword_q, str(per_page), str(per_page * page))
         print('URL:', query)
@@ -295,7 +296,10 @@ def get_papers(keyword, num_results=5):
         except urllib.error.HTTPError as e:
             print('Error {}: problem accessing the server'.format(e.code))
             return
-        txt = response.read()
+        try:                                           #添加了try语句
+            txt = response.read()
+        except http_client.IncompleteRead as e:
+            buffer = e.partial
         #print("开始解析")
 
         # print("txt:")
@@ -346,7 +350,7 @@ def sota(keyword, num_results=5):
 def replace_html(audio_lists, video_list):
     temp = '<tr>\
                 <td class="column3 text-center">\
-                    <a href="https://arxiv.org/abs/2004.11339">{}\
+                    <a href="{}">{}\
                     </a>\
                 </td> \
                 <td class="column3 text-center">{}</td>\
@@ -362,14 +366,15 @@ def replace_html(audio_lists, video_list):
             else:
                 author += detial['author'][a]
         detial['author'] = author
-        s = temp.format(detial['title'], detial['author'], detial['extract'], detial['time'])
+        s = temp.format(detial['link'], detial['title'], detial['author'], detial['extract'], detial['time'])
         tr += s
     format_time = time.asctime()
     template = open('template.html').read()
     template = template.replace('Details', tr)
     template = template.replace('Datetime', format_time)
+    template = template.replace('Thame', 'Speech Separation')
     open('Speech_Separation.html', 'w').write(template)
-    video = ""
+    _video = ''
     for detial in video_list:
         author = ''
         for a in range(len(detial['author'])):
@@ -378,19 +383,22 @@ def replace_html(audio_lists, video_list):
             else:
                 author += detial['author'][a]
         detial['author'] = author
-        s = temp.format(detial['title'], detial['author'], detial['extract'], detial['time'])
-        video += s
+        s = temp.format(detial['link'], detial['title'], detial['author'], detial['extract'], detial['time'])
+        _video += s
     format_time = time.asctime()
     video = open('template.html').read()
-    video = video.replace('Details', video)
+    video = video.replace('Details', _video)
     video = video.replace('Datetime', format_time)
-    open('Audio_Visual.html', 'w').write(template)
-if __name__ == "__main__":
-    index = 1
-    while True:
-        audio_lists = sota('Speech Separation', num_results=50)
-        video_list = sota('Audio Visual', num_results=50)
-        replace_html(audio_lists, video_list)
-        print("flush: " + str(index))
-        index += 1
-        time.sleep(86400)
+    video = video.replace('Thame', 'Audio Visual')
+    open('Audio_Visual.html', 'w').write(video)
+
+index = 1
+while True:
+    reports = []
+    audio_lists = sota('Speech Separation', num_results=50)
+    reports = []
+    video_list = sota('Audio Visual', num_results=50)
+    replace_html(audio_lists, video_list)
+    print("flush: " + str(index))
+    index += 1
+    time.sleep(86400)
